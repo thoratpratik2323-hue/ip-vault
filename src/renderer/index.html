@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP VAULT | Stark Intelligence OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap');
+        .scan-line { height: 2px; width: 100%; background: #00f2ff; position: absolute; top: 0; box-shadow: 0 0 15px #00f2ff; animation: scan 2s infinite linear; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .biometric-box { position: relative; width: 100px; height: 120px; border: 2px solid rgba(0, 242, 255, 0.2); border-radius: 12px; margin: 0 auto 20px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .biometric-box svg { fill: rgba(0, 242, 255, 0.4); width: 60px; height: 60px; }
+        .drag-over { border: 2px dashed #00f2ff !important; background: rgba(0, 242, 255, 0.05) !important; }
+        @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+        .self-destruct-active { animation: shake 0.5s infinite; background: #450a0a !important; }
+        
+        .voice-bar { width: 3px; background: #00f2ff; margin: 0 1px; border-radius: 10px; transition: height 0.1s ease; }
+        .animate-voice .voice-bar { animation: bar-dance 0.5s infinite ease-in-out alternate; }
+        @keyframes bar-dance { 0% { height: 4px; } 100% { height: 20px; } }
+
+        .radar { width: 150px; height: 150px; border: 1px solid rgba(0, 242, 255, 0.1); border-radius: 50%; position: relative; overflow: hidden; }
+        .radar::after { content: ''; position: absolute; width: 100%; height: 100%; background: conic-gradient(from 0deg, #00f2ff33, transparent); border-radius: 50%; animation: rotate-radar 4s linear infinite; }
+        @keyframes rotate-radar { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .radar-dot { position: absolute; width: 4px; height: 4px; background: #00f2ff; border-radius: 50%; box-shadow: 0 0 10px #00f2ff; animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-[#00040a] text-white min-h-screen font-['Outfit'] overflow-hidden">
+    <div class="aurora"></div>
+
+    <div id="idle-overlay" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center backdrop-blur-3xl bg-black/60">
+        <h2 class="text-4xl font-black mb-4 text-cyan-400">SESSION EXPIRED</h2>
+        <p class="text-white/40 tracking-[0.3em] uppercase mb-12">System Locked Due to Inactivity</p>
+        <button onclick="window.location.reload()" class="bg-cyan-500 text-black font-black px-12 py-4 rounded-full hover:scale-110 transition-all">RE-AUTHENTICATE</button>
+    </div>
+
+    <div id="unlock-screen" class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xl transition-all duration-700">
+        <div id="unlock-box" class="glass-container p-12 max-w-md w-full text-center reveal-login">
+            <h1 class="text-4xl font-black tracking-tighter mb-2 bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">IP VAULT</h1>
+            <p class="text-[9px] text-white/40 uppercase tracking-[0.3em] mb-8 leading-relaxed">STARK INTELLIGENCE OS LOCK</p>
+            
+            <div class="biometric-box">
+                <div id="scan-bar" class="scan-line hidden"></div>
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+            </div>
+
+            <input type="password" id="password-input" placeholder="ACCESS KEYCODE" 
+                class="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 mb-4 text-center focus:outline-none focus:border-cyan-500 transition-all font-mono tracking-widest uppercase">
+            <button id="unlock-btn" class="w-full bg-cyan-600 hover:bg-cyan-500 text-black font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(0,242,255,0.3)] transition-all transform active:scale-95 mb-4">
+                COMMENCE SCAN
+            </button>
+            <div id="status-tag" class="text-[10px] text-white/20 mt-4 uppercase tracking-[0.1em] font-black">CORE SECURITY : ARMORED</div>
+        </div>
+    </div>
+
+    <div id="note-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-8">
+        <div class="glass-dark p-8 max-w-2xl w-full rounded-3xl border border-white/10 flex flex-col h-[600px] shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+            <h3 class="text-xl font-bold mb-6 flex justify-between items-center text-cyan-400">
+                <span>CREATE SECURE NOTE</span>
+                <button id="close-note" class="text-white/30 hover:text-white">&times;</button>
+            </h3>
+            <input type="text" id="note-title" placeholder="NOTE TITLE" class="bg-white/5 border-b border-white/10 w-full mb-6 py-2 px-1 focus:outline-none text-cyan-400 font-bold uppercase tracking-widest">
+            <textarea id="note-content" placeholder="ENTER PRIVATE DATA HERE..." class="bg-transparent border border-white/5 rounded-xl w-full flex-grow p-6 text-sm leading-relaxed focus:outline-none custom-scroll"></textarea>
+            <button id="save-note-btn" class="mt-8 bg-cyan-600 text-black font-black py-4 rounded-xl hover:bg-cyan-400 transition-all flex items-center justify-center gap-2 tracking-widest">
+                ENCRYPT & LOCK NOTE
+            </button>
+        </div>
+    </div>
+
+    <div id="dashboard" class="hidden h-screen flex flex-col p-8 lg:p-12 overflow-hidden">
+        <header class="flex justify-between items-center mb-12">
+            <div class="flex items-center gap-6">
+                <div>
+                    <h2 class="text-3xl font-black tracking-tighter text-white">COMMAND CENTRE</h2>
+                    <div class="h-1 w-24 bg-cyan-500 mt-2 rounded-full shadow-[0_0_15px_#00f2ff]"></div>
+                </div>
+                <div class="relative ml-8">
+                    <input type="text" id="search-input" placeholder="SEARCH ASSETS..." 
+                        class="bg-white/5 border border-white/10 rounded-full px-6 py-2 text-xs w-64 focus:outline-none focus:border-cyan-500/50 transition-all uppercase tracking-widest font-bold">
+                </div>
+            </div>
+            <div id="voice-viz" class="flex items-center gap-1 opacity-20">
+                <div class="voice-bar h-2"></div><div class="voice-bar h-4"></div><div class="voice-bar h-2"></div><div class="voice-bar h-6"></div><div class="voice-bar h-3"></div><div class="voice-bar h-5"></div>
+            </div>
+            <div class="flex gap-4 items-center">
+                <button id="logout-btn" class="text-white/40 hover:text-white uppercase tracking-widest text-[9px] font-black px-4 py-2 border border-white/5 rounded-full hover:bg-white/5 transition-all">LOGOUT</button>
+                <button id="add-note-btn" class="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-2.5 rounded-full font-bold flex items-center gap-2 transition-all text-xs tracking-widest uppercase">
+                    + SECURE NOTE
+                </button>
+                <button id="add-file-btn" class="bg-cyan-600 text-black px-6 py-2.5 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-all text-xs tracking-widest shadow-[0_0_20px_rgba(0,242,255,0.4)] uppercase">
+                   + DEPOSIT FILE
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-grow flex gap-8 mb-4 overflow-hidden">
+            <aside class="w-64 space-y-4 flex flex-col h-full">
+                <div class="category active" data-filter="all"> All Records</div>
+                <div class="category" data-filter="doc"> Archives</div>
+                <div class="category" data-filter="img"> Visuals</div>
+                <div class="category" data-filter="note"> Intel Notes</div>
+                
+                <div class="mt-4 p-6 glass-dark rounded-3xl border border-white/5">
+                    <p class="text-[9px] text-cyan-400 uppercase tracking-[0.2em] mb-4 font-black">Storage Index</p>
+                    <div class="h-1 w-full bg-white/5 rounded-full mb-3 overflow-hidden">
+                        <div id="storage-bar" class="h-full bg-cyan-500 shadow-[0_0_10px_#00f2ff]" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[8px] font-black tracking-widest opacity-60">
+                        <span id="storage-count">0 RECORDS</span>
+                        <span id="storage-total">0.0 KB</span>
+                    </div>
+                </div>
+
+                 <div class="p-6 glass-dark rounded-3xl border border-white/5 bg-black/40 flex flex-col items-center">
+                    <p class="text-[9px] text-white/30 uppercase tracking-[0.2em] mb-4 font-bold">Satellite Fix</p>
+                    <div class="radar">
+                        <div class="radar-dot" style="top: 30px; left: 80px;"></div>
+                        <div class="radar-dot" style="top: 100px; left: 40px;"></div>
+                        <div class="radar-dot" style="top: 70px; left: 110px;"></div>
+                    </div>
+                    <p class="text-[7px] text-cyan-500 mt-4 tracking-[0.3em] font-black animate-pulse uppercase">Link Static : Safe</p>
+                 </div>
+
+                 <div class="flex-grow p-6 glass-dark rounded-3xl border border-white/5 mt-4 overflow-hidden flex flex-col min-h-0 bg-white/[0.02]">
+                    <p class="text-[9px] text-white/30 uppercase tracking-[0.2em] mb-4 font-black">Operator Log</p>
+                    <div id="log-list" class="space-y-4 text-[8px] uppercase font-bold tracking-[0.15em] text-white/20 custom-scroll overflow-y-auto"></div>
+                 </div>
+            </aside>
+
+            <section id="drop-zone" class="flex-grow glass-dark rounded-[2.5rem] p-10 overflow-y-auto custom-scroll border border-transparent transition-all shadow-inner">
+                <div id="file-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"></div>
+                <div id="empty-state" class="hidden flex flex-col items-center justify-center py-40 opacity-20 transform -translate-y-12">
+                    <div class="w-20 h-20 border-2 border-white/20 rounded-full mb-8 flex items-center justify-center animate-pulse">
+                        <span class="text-3xl">+</span>
+                    </div>
+                    <p class="text-xl uppercase tracking-[0.4em] font-black text-white">Vault Secured</p>
+                    <p class="text-[10px] mt-2 tracking-[0.2em]">Transmission waiting for source data</p>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="flex justify-between items-center text-[9px] text-white/10 uppercase tracking-[0.3em] font-black border-t border-white/5 pt-6">
+            <div id="footer-status" class="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> SYSTEM ONLINE : STARK-NET ENCRYPTED</div>
+            <div>STARK INDUSTRIES | GLOBAL ACCESS v2.5 [PROTECTED]</div>
+        </footer>
+    </div>
+
+    <div id="toast" class="fixed bottom-12 left-1/2 -translate-x-1/2 glass-dark px-10 py-5 rounded-full border border-cyan-500/20 text-cyan-400 font-black uppercase tracking-[0.2em] text-[10px] translate-y-32 transition-transform z-50 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const { vaultAPI } = window;
+            const unlockBtn = document.getElementById('unlock-btn');
+            const unlockScreen = document.getElementById('unlock-screen');
+            const unlockBox = document.getElementById('unlock-box');
+            const scanBar = document.getElementById('scan-bar');
+            const dashboard = document.getElementById('dashboard');
+            const passInput = document.getElementById('password-input');
+            const fileGrid = document.getElementById('file-grid');
+            const emptyState = document.getElementById('empty-state');
+            const toast = document.getElementById('toast');
+            const addBtn = document.getElementById('add-file-btn');
+            const addNoteBtn = document.getElementById('add-note-btn');
+            const logList = document.getElementById('log-list');
+            const searchInput = document.getElementById('search-input');
+            const storageBar = document.getElementById('storage-bar');
+            const storageCountEl = document.getElementById('storage-count');
+            const storageTotalEl = document.getElementById('storage-total');
+            const voiceViz = document.getElementById('voice-viz');
+            const idleOverlay = document.getElementById('idle-overlay');
+
+            let vaultData = { files: [], logs: [], notes: [] };
+            let currentFilter = 'all';
+            let searchQuery = '';
+            let idleTimer;
+
+            const resetIdleTimer = () => {
+                clearTimeout(idleTimer);
+                if(!dashboard.classList.contains('hidden')) {
+                    idleTimer = setTimeout(() => {
+                        idleOverlay.classList.remove('hidden');
+                        document.getElementById('footer-status').innerHTML = '<span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> SESSION TIMEOUT';
+                    }, 120000); 
+                }
+            };
+            window.addEventListener('mousemove', resetIdleTimer);
+            window.addEventListener('keypress', resetIdleTimer);
+
+            const triggerVoice = () => {
+                voiceViz.classList.add('animate-voice', 'opacity-100');
+                setTimeout(() => voiceViz.classList.remove('animate-voice', 'opacity-20'), 1500);
+            };
+
+            const addLog = (msg) => {
+                const now = new Date().toLocaleTimeString();
+                const log = document.createElement('div');
+                log.className = "mb-2 pb-2 border-b border-white/5";
+                log.innerHTML = `<span class="text-white/10 font-mono">[${now}]</span> ${msg}`;
+                logList.prepend(log);
+                if(!vaultData.logs) vaultData.logs = [];
+                vaultData.logs.push({ time: now, msg });
+                if(vaultData.logs.length > 50) vaultData.logs.shift();
+            };
+
+            const updateStats = () => {
+                const f = vaultData.files || [];
+                const n = vaultData.notes || [];
+                const totalBytes = f.reduce((acc, x) => acc + (x.size || 0), 0);
+                storageCountEl.innerText = `${f.length + n.length} RECORDS`;
+                storageTotalEl.innerText = `${(totalBytes / 1024).toFixed(1)} KB`;
+                storageBar.style.width = Math.min((totalBytes / (1024 * 1024)) * 100, 100) + '%';
+            };
+
+            const renderFiles = () => {
+                fileGrid.innerHTML = '';
+                const f = vaultData.files || [];
+                const n = vaultData.notes || [];
+                const combined = [
+                    ...f.map(x => ({...x, kind: 'file'})),
+                    ...n.map(x => ({...x, kind: 'note', type: '.nt'}))
+                ];
+
+                const filtered = combined.filter(x => {
+                    const matchesCategory = currentFilter === 'all' || 
+                        (currentFilter === 'doc' && ['.pdf', '.doc', '.docx', '.txt'].includes(x.type.toLowerCase())) ||
+                        (currentFilter === 'img' && ['.jpg', '.png', '.gif', '.webp'].includes(x.type.toLowerCase())) ||
+                        (currentFilter === 'note' && x.kind === 'note') ||
+                        (currentFilter === 'vid' && ['.mp4', '.mp3', '.avi'].includes(x.type.toLowerCase()));
+                    const matchesSearch = x.name.toLowerCase().includes(searchQuery.toLowerCase());
+                    return matchesCategory && matchesSearch;
+                });
+
+                if (filtered.length === 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                    filtered.forEach(async item => {
+                        const isImg = ['.jpg', '.png', '.gif', '.webp'].includes(item.type.toLowerCase());
+                        const card = document.createElement('div');
+                        card.className = 'file-card group relative bg-white/5 border border-white/5 p-8 rounded-[1.5rem] hover:bg-white/10 transition-all cursor-pointer overflow-hidden min-h-[160px] flex flex-col shadow-xl';
+                        
+                        let previewHtml = `<div class="w-14 h-14 ${item.kind === 'note' ? 'bg-purple-500/10 text-purple-400' : 'bg-cyan-500/10 text-cyan-400'} rounded-2xl flex items-center justify-center font-black text-[12px] uppercase tracking-tighter">${item.type.replace('.', '')}</div>`;
+                        
+                        if (isImg && vaultAPI) {
+                            try {
+                                const b64 = await vaultAPI.readFile(item.id);
+                                previewHtml = `<div class="absolute inset-0 opacity-20 group-hover:opacity-60 transition-all duration-500 bg-center bg-cover" style="background-image: url(data:image/${item.type.replace('.', '')};base64,${b64})"></div>`;
+                            } catch(e) {}
+                        }
+
+                        card.innerHTML = `
+                            ${previewHtml}
+                            <div class="relative z-10 mt-auto">
+                                <p class="font-black truncate text-sm mb-1 uppercase tracking-wider">${item.name}</p>
+                                <p class="text-[9px] text-white/20 uppercase tracking-[0.2em] font-bold">${item.kind === 'note' ? 'SECURE INTEL' : (item.size / 1024).toFixed(1) + ' KB'}</p>
+                            </div>
+                            <div class="absolute top-6 right-6 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                <button class="bg-black/60 hover:bg-red-500 p-2 rounded-lg text-[8px] font-black delete-btn border border-white/5">DEL</button>
+                                ${item.kind === 'note' ? '<button class="bg-black/60 hover:bg-purple-500 p-2 rounded-lg text-[8px] font-black view-btn border border-white/5">VIEW</button>' : '<button class="bg-cyan-500 text-black p-2 rounded-lg text-[8px] font-black restore-btn border border-white/5">RESTORE</button>'}
+                            </div>
+                        `;
+
+                        if(item.kind === 'note') {
+                            card.querySelector('.view-btn').onclick = (e) => {
+                                e.stopPropagation();
+                                triggerVoice();
+                                document.getElementById('note-title').value = item.name;
+                                document.getElementById('note-content').value = item.content;
+                                document.getElementById('note-modal').classList.remove('hidden');
+                            };
+                        } else {
+                            card.querySelector('.restore-btn').onclick = async (e) => {
+                                e.stopPropagation();
+                                triggerVoice();
+                                const res = await vaultAPI.downloadFile(item.id, item.name);
+                                if(res.success) addLog(`RETRIEVED ${item.name}`);
+                            };
+                        }
+
+                        card.querySelector('.delete-btn').onclick = async (e) => {
+                            e.stopPropagation();
+                            if(!confirm("ERASE?")) return;
+                            if(item.kind === 'file') {
+                                await vaultAPI.deleteFile(item.id);
+                                vaultData.files = vaultData.files.filter(f => f.id !== item.id);
+                            } else {
+                                vaultData.notes = vaultData.notes.filter(n => n.id !== item.id);
+                            }
+                            await vaultAPI.saveMetadata(vaultData);
+                            addLog(`ERASED ${item.name}`);
+                            renderFiles();
+                            updateStats();
+                        };
+                        fileGrid.appendChild(card);
+                    });
+                }
+            };
+
+            const doUnlock = async () => {
+                const key = passInput.value;
+                if(!key) return;
+
+                scanBar.classList.remove('hidden');
+                unlockBtn.innerText = "AUTHENTICATING...";
+                
+                setTimeout(async () => {
+                    if(vaultAPI) {
+                        try {
+                            await vaultAPI.unlock(key);
+                            const loadedData = await vaultAPI.loadMetadata();
+                            
+                            // FAIL CHECK
+                            if (loadedData === null) {
+                                scanBar.classList.add('hidden');
+                                unlockBox.classList.add('self-destruct-active');
+                                unlockBtn.innerText = "ACCESS DENIED : WRONG KEY";
+                                unlockBtn.style.background = "#ef4444";
+                                setTimeout(() => {
+                                    unlockBox.classList.remove('self-destruct-active');
+                                    unlockBtn.innerText = "RE-ATTEMPT";
+                                    unlockBtn.style.background = "";
+                                }, 1000);
+                                return;
+                            }
+
+                            vaultData = loadedData || { files: [], logs: [], notes: [] };
+                            unlockBtn.innerText = "ACCESS GRANTED";
+                            unlockBtn.style.background = "#22c55e";
+                            unlockScreen.classList.add('-translate-y-full', 'opacity-0');
+                            
+                            setTimeout(() => {
+                                unlockScreen.style.display = 'none';
+                                dashboard.classList.remove('hidden');
+                                if(vaultData.logs) {
+                                    vaultData.logs.forEach(l => {
+                                        const div = document.createElement('div');
+                                        div.className = "mb-2 pb-2 border-b border-white/5";
+                                        div.innerHTML = `<span class="text-white/10 font-mono">[${l.time}]</span> ${l.msg}`;
+                                        logList.appendChild(div);
+                                    });
+                                }
+                                addLog("STARK SYSTEMS ACTIVE");
+                                updateStats();
+                                renderFiles();
+                                resetIdleTimer();
+                            }, 600);
+
+                        } catch(e) { console.error(e); }
+                    }
+                }, 1200);
+            };
+
+            unlockBtn.onclick = doUnlock;
+            passInput.onkeypress = (e) => { if(e.key === 'Enter') doUnlock(); };
+            searchInput.oninput = (e) => { searchQuery = e.target.value; renderFiles(); };
+
+            addBtn.onclick = async () => {
+                const paths = await vaultAPI.selectFiles();
+                if (!paths) return;
+                triggerVoice();
+                for (const p of paths) {
+                    const saved = await vaultAPI.saveFile(p);
+                    if(!vaultData.files) vaultData.files = [];
+                    vaultData.files.push(saved);
+                    addLog(`DEPOSITED: ${saved.name}`);
+                }
+                await vaultAPI.saveMetadata(vaultData);
+                updateStats();
+                renderFiles();
+            };
+
+            addNoteBtn.onclick = () => { triggerVoice(); document.getElementById('note-modal').classList.remove('hidden'); };
+            document.getElementById('save-note-btn').onclick = async () => {
+                const title = document.getElementById('note-title').value || 'SECURE NOTE';
+                const content = document.getElementById('note-content').value;
+                if(!vaultData.notes) vaultData.notes = [];
+                vaultData.notes.push({ id: 'note_'+Date.now(), name: title, content, type: '.nt', size: content.length });
+                await vaultAPI.saveMetadata(vaultData);
+                document.getElementById('note-modal').classList.add('hidden');
+                addLog(`NOTE ENCRYPTED: ${title}`);
+                renderFiles();
+                updateStats();
+            };
+
+            document.getElementById('close-note').onclick = () => document.getElementById('note-modal').classList.add('hidden');
+            
+            document.querySelectorAll('.category').forEach(cat => {
+                cat.onclick = () => {
+                    document.querySelectorAll('.category').forEach(c => c.classList.remove('active'));
+                    cat.classList.add('active');
+                    currentFilter = cat.dataset.filter;
+                    renderFiles();
+                };
+            });
+
+            document.getElementById('logout-btn').onclick = async () => { await vaultAPI.logout(); };
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.DS_Store
+*.enc
+.env
+vault_data/
+out/
+.gemini/
